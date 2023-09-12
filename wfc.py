@@ -7,7 +7,7 @@ from enum import Enum, auto
 from dataclasses import dataclass
 
 
-def clean_hex(n):
+def clean_hex(n: int):
     return '{:2s}'.format(hex(n)[2:])
 
 
@@ -140,7 +140,6 @@ def propagate(cell: Cell, grid: Grid, rules):
     if len(cell.options) == 1:
         cell.value = cell.options[0]
         cell.options.clear()
-        propagate(cell, grid, rules)
 
     for neighbor in cell_neighbors(cell, grid):
         if neighbor.is_solved():
@@ -168,8 +167,9 @@ def propagate(cell: Cell, grid: Grid, rules):
                 assert len(neighbor.options) > 0, 'Removed too many options'
 
         neighbor_after = len(neighbor.options)
+        neighbor_updated = neighbor_after != neighbor_before
 
-        if neighbor_after != neighbor_before:
+        if neighbor_updated:
             propagate(neighbor, grid, rules)
 
 
@@ -200,6 +200,7 @@ def is_solved(grid: Grid):
     return grid.is_solved()
 
 
+@numba.njit
 def load_grid(w: int, h: int):
     cells = {}
     for y in range(h):
