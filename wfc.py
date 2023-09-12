@@ -104,13 +104,11 @@ def get_min_entropy(grid: Grid):
     flat = list(grid)
     flat.sort(key=entropy)
 
-    flat = filter(lambda c: not c.is_solved(), flat)
-    flat = list(flat)
+    flat = list(filter(lambda c: not c.is_solved(), flat))
     assert len(flat) > 0, 'No cells left'
 
     min_e = entropy(flat[0])
-    flat = filter(lambda c: entropy(c) == min_e, flat)
-    flat = list(flat)
+    flat = list(filter(lambda c: entropy(c) == min_e, flat))
     assert len(flat) > 0, 'No cells left'
 
     return choice(flat)
