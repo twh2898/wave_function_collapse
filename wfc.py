@@ -3,16 +3,20 @@
 import sys
 import colorama
 from random import choice
+from typing import TextIO
 
 from enum import Enum
 from dataclasses import dataclass
 
 
 def clean_hex(n: int):
+    """Return a 2 character hex string for integer n with space padding."""
     return '{:2s}'.format(hex(n)[2:])
 
 
 class Tile(Enum):
+    """Enumerated Tile types."""
+
     Water = 1
     Sand = 2
     Grass = 4
@@ -20,6 +24,7 @@ class Tile(Enum):
 
     @classmethod
     def from_value(cls, value):
+        """Get the Tile enum from the given value."""
         match value:
             case 1:
                 return cls.Water
@@ -32,6 +37,7 @@ class Tile(Enum):
 
     @classmethod
     def whoami(cls, n):
+        """Return a list of Tiles for each flag in integer n."""
         assert 0 <= n < 16, 'N must be 0 to 16'
         res = []
         if n & 1:
@@ -47,21 +53,26 @@ class Tile(Enum):
 
 @dataclass
 class Cell:
+    """Represents a single cell with coordinates, value and options."""
+
     x: int
     y: int
     options: list
     value: Tile | None = None
 
     def remove(self, *options):
+        """Remove options for this Cell."""
         for option in options:
             if option in self.options:
                 self.options.remove(option)
         assert len(self.options) > 0, 'Cell ran out of options'
 
     def is_solved(self):
+        """Return true if this Cell has a value set."""
         return self.value is not None
 
     def entropy(self, grid: 'Grid'):
+        """Get the entropy of this Cell."""
         if self.is_solved():
             return -1
 
@@ -72,11 +83,14 @@ class Cell:
 
 @dataclass
 class Grid:
+    """Represents a grid with dimensions and cells."""
+
     w: int
     h: int
     cells: dict[tuple[int, int], Cell]
 
     def is_solved(self):
+        """Return true if all cells are solved."""
         for cell in self.cells.values():
             if not cell.is_solved():
                 return False
@@ -99,6 +113,11 @@ def rules_from_img(img):
 
 
 def get_min_entropy(grid: Grid):
+    """
+    Return the cell with the least entropy.
+
+    If there are multiple cells with the same entropy, choose one randomly.
+    """
     def entropy(cell: Cell):
         return cell.entropy(grid)
 
@@ -116,6 +135,7 @@ def get_min_entropy(grid: Grid):
 
 
 def cell_neighbors(cell: Cell, grid: Grid) -> list[Cell]:
+    """Get a list of neighbors for the given Cell."""
     cells = []
 
     if cell.x > 0:
@@ -136,6 +156,7 @@ def cell_neighbors(cell: Cell, grid: Grid) -> list[Cell]:
 
 
 def propagate(cell: Cell, grid: Grid, rules):
+    """Propagate changes to cell."""
     if len(cell.options) == 1:
         cell.value = cell.options[0]
         cell.options.clear()
@@ -173,6 +194,7 @@ def propagate(cell: Cell, grid: Grid, rules):
 
 
 def collapse_cell(cell: Cell):
+    """Choose a random value from the Cell options."""
     assert not cell.is_solved(), 'Cell is already solved'
     assert len(cell.options) > 0, 'Cell has no options'
     cell.value = choice(cell.options)
@@ -180,26 +202,18 @@ def collapse_cell(cell: Cell):
 
 
 def collapse(grid: Grid, rules):
+    """
+    Set a random value for a cell with min entropy.
+
+    This function calls propagate on the selected cell.
+    """
     cell = get_min_entropy(grid)
     collapse_cell(cell)
     propagate(cell, grid, rules)
 
 
-def collapse_tmp(grid: Grid):
-    for cell in grid:
-        if not is_cell_solved(cell):
-            cell.value = Tile.Sand
-
-
-def is_cell_solved(cell: Cell):
-    return cell.is_solved()
-
-
-def is_solved(grid: Grid):
-    return grid.is_solved()
-
-
 def load_grid(w: int, h: int):
+    """Create a grid of width w and height h."""
     cells = {}
     for y in range(h):
         for x in range(w):
@@ -210,6 +224,7 @@ def load_grid(w: int, h: int):
 
 
 def init_grid(grid: Grid):
+    """Set the borders of grid to water and add a stone to the center."""
     for x in range(grid.w):
         cell = grid[(x, 0)]
         cell.value = Tile.Water
@@ -247,7 +262,8 @@ cmap = {
 }
 
 
-def debug_grid(grid: Grid, f=None):
+def print_grid(grid: Grid, f: TextIO | None = sys.stdout):
+    """Print grid to a file stream."""
     for y in range(grid.h):
         for x in range(grid.w):
             cell = grid[(x, y)]
@@ -263,32 +279,27 @@ def debug_grid(grid: Grid, f=None):
     print(file=f)
 
 
-def print_grid(grid: Grid):
-    for y in range(grid.h):
-        for x in range(grid.w):
-            cell = grid[(x, y)]
-            print(cmap[cell.value] + "██" + colorama.Fore.RESET, end="")
-        print()
-
-
-def print_grids(grids: list[Grid], h: int):
+def print_grids(grids: list[Grid], h: int, f: TextIO | None = sys.stdout):
+    """Print multiple grids to a file stream."""
     for y in range(h):
         for g in grids:
             for x in range(g.w):
                 cell = g[(x, y)]
-                print(cmap[cell.value] + "██" + colorama.Fore.RESET, end="")
-            print('  ', end='')
-        print()
+                print(cmap[cell.value] + "██" +
+                      colorama.Fore.RESET, end="", file=f)
+            print('  ', end='', file=f)
+        print(file=f)
 
 
 def main_multi(w, h, rules):
+    """Generate multiple grids."""
     for _ in range(5):
         grids = []
         for _ in range(3):
             grid = load_grid(w, h)
             init_grid(grid)
 
-            while not is_solved(grid):
+            while not grid.is_solved():
                 collapse(grid, rules)
 
             grids.append(grid)
@@ -298,7 +309,7 @@ def main_multi(w, h, rules):
 
 
 def main(w, h, rules, debug=False, f=None):
-    # rules = rules_from_img(img)
+    """Generate a single grid."""
     rules = load_rules()
 
     grid = load_grid(w, h)
@@ -306,32 +317,35 @@ def main(w, h, rules, debug=False, f=None):
     if debug:
         if f:
             f.write('0\n')
-        debug_grid(grid, f)
-        debug_grid(grid, sys.stdout)
+        print_grid(grid, f)
+        print_grid(grid)
 
     i = 1
-    while not is_solved(grid):
+    while not grid.is_solved():
         collapse(grid, rules)
         if debug:
             if f:
                 f.write(str(i) + '\n')
-            debug_grid(grid, f)
-            debug_grid(grid, sys.stdout)
+            print_grid(grid, f)
+            print_grid(grid)
         i += 1
-    # TODO: Write grid for each step to file for later review
-    # Show in pyplot or print to console with clear before next draw
 
     print_grid(grid)
 
 
 if __name__ == '__main__':
-    # for i in range(16):
-    #     s = Tile.whoami(i)
-    #     print(clean_hex(i), '=', s)
+    for i in range(16):
+        s = Tile.whoami(i)
+        print(clean_hex(i), '=', s)
 
     # rules = rules_from_img(img)
     rules = load_rules()
 
-    main_multi(16, 16, rules)
-    # with open('debug', 'w') as f:
-    #     main(16, 16, rules, debug=True, f=f)
+    use_multi = True
+
+    if use_multi:
+        main_multi(16, 16, rules)
+
+    else:
+        with open('debug', 'w') as f:
+            main(16, 16, rules, debug=True, f=f)
