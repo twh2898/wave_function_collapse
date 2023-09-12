@@ -2,9 +2,9 @@
 
 import sys
 import colorama
-from random import randint, choice
+from random import choice
 
-from enum import Enum, auto
+from enum import Enum
 from dataclasses import dataclass
 
 
