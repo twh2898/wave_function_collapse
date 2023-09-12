@@ -198,7 +198,6 @@ def is_solved(grid: Grid):
     return grid.is_solved()
 
 
-@numba.njit
 def load_grid(w: int, h: int):
     cells = {}
     for y in range(h):
