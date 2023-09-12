@@ -332,6 +332,6 @@ if __name__ == '__main__':
     # rules = rules_from_img(img)
     rules = load_rules()
 
-    main_multi(24, 24, rules)
+    main_multi(16, 16, rules)
     # with open('debug', 'w') as f:
     #     main(16, 16, rules, debug=True, f=f)
